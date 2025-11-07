@@ -1,7 +1,4 @@
 {
   "name": "POWERART Application",
-  "description": "A personal fitness and nutrition tracker powered by AI. Log workouts, meals, and water intake to monitor your daily progress and achieve your health goals with a clean, modern interface.",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "description": "A personal fitness and nutrition tracker powered by AI. Log workouts, meals, and water intake to monitor your daily progress and achieve your health goals with a clean, modern interface."
 }

@@ -1,30 +1,31 @@
 {
-  "name": "powerart-application",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "name": "fitart",
+  "version": "1.0.0",
+  "main": "index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios"
   },
   "dependencies": {
-    "react": "^19.2.0",
-    "expo-updates": "^29.0.12",
-    "@google/genai": "^1.29.0",
-    "recharts": "^3.3.0",
-    "html-to-image": "^1.11.13",
-    "expo": "^54.0.22",
-    "expo-status-bar": "^3.0.8",
-    "@react-native-async-storage/async-storage": "^2.2.0",
-    "react-native": "^0.82.1",
-    "react-native-safe-area-context": "^5.6.2",
-    "react-native-gesture-handler": "^2.29.1"
+    "react": "18.2.0",
+    "react-native": "0.74.1",
+    "expo": "~51.0.8",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "expo-status-bar": "~1.12.1",
+    "expo-updates": "~0.25.11",
+    "react-native-safe-area-context": "4.10.1",
+    "@google/genai": "^0.14.0",
+    "recharts": "^2.12.7",
+    "react-native-svg": "15.2.0",
+    "html-to-image": "^1.11.11",
+    "nativewind": "^2.0.11"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
-  }
+    "@babel/core": "^7.20.0",
+    "typescript": "~5.3.3",
+    "@types/react": "~18.2.79",
+    "tailwindcss": "3.3.2"
+  },
+  "private": true
 }

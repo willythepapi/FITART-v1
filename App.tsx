@@ -1,4 +1,4 @@
-
+import '../global.css';
 import React, { useState, useEffect } from 'react';
 // Fix: Import TouchableOpacity from react-native.
 import { View, StyleSheet, useColorScheme, TouchableOpacity } from 'react-native';
@@ -88,7 +88,7 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme === 'dark' ? '#000' : '#F0F2F5' }]} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme === 'dark' ? '#0D0F11' : '#F0F2F5' }]} edges={['top', 'left', 'right']}>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <View style={{ flex: 1, paddingBottom: 64 }}>
         {renderScreen()}
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: 'rgba(58, 58, 60, 0.8)', // fab-bg with backdrop blur approximation
+        backgroundColor: 'rgba(26, 29, 33, 0.8)', // fab-bg with backdrop blur approximation
         alignItems: 'center',
         justifyContent: 'center',
         shadowColor: '#000',
