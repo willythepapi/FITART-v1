@@ -1,28 +1,37 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { Camera, CameraType, FlashMode } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
+import { styled } from 'nativewind';
 import { useLanguage } from '../context/LanguageContext';
 import Icon from '../components/Icon';
 import Button from '../components/Button';
 import AppTextField from '../components/AppTextField';
 import { useAppUseCases } from '../application/usecase-provider';
 import type { NavItem } from '../types';
-import type { UserEntity } from '../domain/entities';
+
+const StyledView = styled(View);
+const StyledText = styled(Text);
+const StyledTouchableOpacity = styled(TouchableOpacity);
+const StyledImage = styled(Image);
 
 // Save progress screen component, nested for simplicity
 const SaveProgressScreen: React.FC<{
-    imageSrc: string;
+    imageUri: string;
     onRetake: () => void;
     onSave: (note: string) => void;
     isSaving: boolean;
-}> = ({ imageSrc, onRetake, onSave, isSaving }) => {
+}> = ({ imageUri, onRetake, onSave, isSaving }) => {
     const [note, setNote] = useState('');
     
     return (
-        <div className="absolute inset-0 bg-dark-bg flex flex-col justify-center items-center animate-fadeIn p-4">
-            <div className="w-full max-w-[360px] aspect-[9/16] rounded-radius-std overflow-hidden mb-4 shadow-lg">
-                <img src={imageSrc} alt="Captured preview" className="w-full h-full object-cover" />
-            </div>
+        <StyledView className="absolute inset-0 bg-dark-bg flex flex-col justify-center items-center p-4">
+            <StyledView className="w-full max-w-[360px] aspect-[9/16] rounded-radius-std overflow-hidden mb-4 shadow-lg">
+                <StyledImage source={{ uri: imageUri }} className="w-full h-full" />
+            </StyledView>
 
-            <div className="w-full max-w-[360px]">
+            <StyledView className="w-full max-w-[360px]">
+                {/* Fix: Changed onChangeText to onChange and adapted the handler to use e.target.value. */}
                 <AppTextField 
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
@@ -30,165 +39,79 @@ const SaveProgressScreen: React.FC<{
                     className="mb-4"
                 />
 
-                <div className="flex justify-center gap-4">
+                <StyledView className="flex-row justify-center gap-4">
+                    {/* Fix: Changed onPress to onClick to match the Button component's expected props. */}
                     <Button onClick={onRetake} variant="ghost" disabled={isSaving}>
                         Retake
                     </Button>
+                    {/* Fix: Changed onPress to onClick to match the Button component's expected props. */}
                     <Button onClick={() => onSave(note)} variant="primary" disabled={isSaving}>
                         {isSaving ? 'Saving...' : 'Save Progress'}
                     </Button>
-                </div>
-            </div>
-        </div>
+                </StyledView>
+            </StyledView>
+        </StyledView>
     );
 };
 
 
 const CameraScreen: React.FC<{ setActiveTab: (tab: NavItem) => void }> = ({ setActiveTab }) => {
     const { t } = useLanguage();
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [stream, setStream] = useState<MediaStream | null>(null);
-    const [cameraState, setCameraState] = useState<'idle' | 'granted' | 'denied'>('idle');
-    const [isLoading, setIsLoading] = useState(true);
-    const [isStreamReady, setIsStreamReady] = useState(false);
+    const [permission, requestPermission] = Camera.useCameraPermissions();
+    const [mediaPermission, requestMediaPermission] = MediaLibrary.usePermissions();
+    const [type, setType] = useState(CameraType.back);
+    const [flash, setFlash] = useState(FlashMode.off);
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
-    const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
     const [isSaving, setIsSaving] = useState(false);
-    const { addProgressPhoto, getUserProfile } = useAppUseCases();
-    
-    const [hasFlash, setHasFlash] = useState(false);
-    const [isFlashOn, setIsFlashOn] = useState(false);
+    const { addProgressPhoto } = useAppUseCases();
+    const cameraRef = useRef<Camera>(null);
 
     useEffect(() => {
-        if (capturedImage) {
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                setStream(null);
-            }
-            return;
+        if (!mediaPermission) {
+            requestMediaPermission();
         }
+    }, [mediaPermission, requestMediaPermission]);
 
-        let active = true;
-        
-        const getStream = async () => {
-            if (stream) {
-                 stream.getTracks().forEach(track => track.stop());
-            }
+    if (!permission) {
+        // Camera permissions are still loading
+        return <StyledView className="flex-1 justify-center items-center bg-dark-bg"><ActivityIndicator size="large" color="#7FB7FF" /></StyledView>;
+    }
 
-            setIsLoading(true);
-            setIsStreamReady(false);
-            setHasFlash(false); // Reset flash state on stream change
-            
+    if (!permission.granted) {
+        // Camera permissions are not granted yet
+        return (
+            <StyledView className="flex-1 justify-center items-center bg-dark-bg p-5">
+                <Icon name="camera" size={64} color="#AAB8C2" />
+                <StyledText className="text-xl font-bold text-center text-dark-text-primary mt-4">{t('camera_enable_title')}</StyledText>
+                <StyledText className="text-center text-dark-text-secondary mt-2 mb-6">{t('camera_enable_subtitle')}</StyledText>
+                {/* Fix: Changed onPress to onClick to match the Button component's expected props. */}
+                <Button onClick={requestPermission}>{t('camera_allow_access')}</Button>
+            </StyledView>
+        );
+    }
+    
+    function toggleCameraType() {
+        setType(current => (current === CameraType.back ? CameraType.front : CameraType.back));
+    }
+
+    function toggleFlash() {
+        setFlash(current => (current === FlashMode.off ? FlashMode.on : FlashMode.off));
+    }
+
+    const takePicture = async () => {
+        if (cameraRef.current) {
             try {
-                const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode } });
-                if (active) {
-                    const track = mediaStream.getVideoTracks()[0];
-                    if (track) {
-                        const capabilities = track.getCapabilities();
-                        setHasFlash('torch' in capabilities);
-                    }
-                    setStream(mediaStream);
-                    setCameraState('granted');
-                }
-            } catch (err) {
-                if (active) {
-                    console.error("Error accessing camera: ", err);
-                    setCameraState('denied');
-                }
-            } finally {
-                if (active) {
-                    setIsLoading(false);
-                }
-            }
-        };
-
-        getStream();
-
-        return () => {
-            active = false;
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                setStream(null);
-            }
-        };
-    }, [facingMode, capturedImage]);
-
-    useEffect(() => {
-        if (stream && videoRef.current) {
-            videoRef.current.srcObject = stream;
-            videoRef.current.play().catch(e => console.error("Video play failed", e));
-            
-            const handleCanPlay = () => setIsStreamReady(true);
-            
-            const currentVideoRef = videoRef.current;
-            currentVideoRef.addEventListener('canplay', handleCanPlay);
-
-            return () => {
-                currentVideoRef.removeEventListener('canplay', handleCanPlay);
-            }
-        }
-    }, [stream]);
-
-    const handleFlipCamera = () => {
-        setFacingMode(prev => (prev === 'environment' ? 'user' : 'environment'));
-    };
-    
-    const toggleFlash = useCallback(async () => {
-      if (!stream || !hasFlash) return;
-      const track = stream.getVideoTracks()[0];
-      const newFlashState = !isFlashOn;
-      try {
-        // Fix: Cast to `any` to bypass TypeScript error for the non-standard `torch` property.
-        await track.applyConstraints({
-          advanced: [{ torch: newFlashState } as any],
-        });
-        setIsFlashOn(newFlashState);
-      } catch (err) {
-        console.error('Failed to toggle flash:', err);
-      }
-    }, [stream, hasFlash, isFlashOn]);
-
-
-    const handleCapture = () => {
-        if (videoRef.current && canvasRef.current && isStreamReady) {
-            const video = videoRef.current;
-            const canvas = canvasRef.current;
-    
-            // Set canvas to a 9:16 aspect ratio for a high-quality, story-like output
-            const targetAspectRatio = 9 / 16;
-            canvas.width = 1080;
-            canvas.height = canvas.width / targetAspectRatio; // This will be 1920
-    
-            const videoWidth = video.videoWidth;
-            const videoHeight = video.videoHeight;
-            const videoAspectRatio = videoWidth / videoHeight;
-    
-            let sx = 0, sy = 0, sWidth = videoWidth, sHeight = videoHeight;
-    
-            // This logic crops the video to fill the 9:16 canvas, simulating `object-fit: cover`
-            if (videoAspectRatio > targetAspectRatio) {
-                // Video is wider than the target aspect ratio (e.g., 16:9 video on 9:16 canvas)
-                // We'll use the full height of the video and crop the sides.
-                sWidth = videoHeight * targetAspectRatio;
-                sx = (videoWidth - sWidth) / 2;
-            } else {
-                // Video is taller than or equal to the target aspect ratio
-                // We'll use the full width of the video and crop the top and bottom.
-                sHeight = videoWidth / targetAspectRatio;
-                sy = (videoHeight - sHeight) / 2;
-            }
-    
-            const context = canvas.getContext('2d');
-            if (context) {
-                // Draw the cropped portion of the video onto the canvas
-                context.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
-                const dataUrl = canvas.toDataURL('image/jpeg');
-                setCapturedImage(dataUrl);
+                const photo = await cameraRef.current.takePictureAsync({
+                    quality: 0.8,
+                    base64: true, // Needed for data URL
+                });
+                setCapturedImage(`data:image/jpeg;base64,${photo.base64}`);
+            } catch (error) {
+                console.log('Error taking picture', error);
             }
         }
     };
-    
+
     const handleRetake = () => {
         setCapturedImage(null);
     };
@@ -211,68 +134,37 @@ const CameraScreen: React.FC<{ setActiveTab: (tab: NavItem) => void }> = ({ setA
         }
     };
     
-    const renderCameraStatus = () => {
-        if (isLoading) {
-             return (
-                <svg className="animate-spin h-10 w-10 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            );
-        }
-        
-        if (cameraState === 'denied') {
-            return (
-                <div className="w-full h-full flex flex-col items-center justify-center text-center text-dark-text-secondary">
-                    <Icon name="camera" className="w-16 h-16 mb-4" />
-                    <h2 className="text-xl font-bold text-danger mb-2">{t('camera_denied_title')}</h2>
-                    <p className="max-w-xs">{t('camera_denied_subtitle')}</p>
-                </div>
-            );
-        }
-
-        return null;
-    }
-    
     return (
-        <div className="h-[calc(100vh-4rem)] w-full bg-dark-bg relative overflow-hidden">
-            <canvas ref={canvasRef} className="hidden" />
+        <StyledView className="flex-1 bg-dark-bg">
             {capturedImage ? (
-                <SaveProgressScreen 
-                    imageSrc={capturedImage} 
-                    onRetake={handleRetake} 
+                <SaveProgressScreen
+                    imageUri={capturedImage}
+                    onRetake={handleRetake}
                     onSave={handleSaveProgress}
                     isSaving={isSaving}
                 />
             ) : (
-                <>
-                    <video 
-                        ref={videoRef} 
-                        autoPlay 
-                        playsInline 
-                        muted 
-                        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${isStreamReady ? 'opacity-100' : 'opacity-0'}`} 
-                    />
-
-                    { (isLoading || cameraState !== 'granted') && (
-                         <div className="absolute inset-0 flex items-center justify-center p-4 text-center bg-dark-bg">
-                           {renderCameraStatus()}
-                         </div>
-                    )}
-
-                    <footer className="absolute bottom-[84px] left-0 right-0 w-full flex justify-center items-center z-10">
-                        <button
-                            onClick={handleCapture}
-                            disabled={!isStreamReady || isLoading}
+                <Camera style={StyleSheet.absoluteFill} type={type} flashMode={flash} ref={cameraRef}>
+                    <StyledView className="flex-1 bg-transparent flex-row justify-between p-5">
+                        <StyledTouchableOpacity onPress={toggleFlash} className="rounded-full bg-black/30 w-12 h-12 items-center justify-center">
+                            <Icon name={flash === FlashMode.on ? 'flash' : 'flash-off'} size={24} color="white" />
+                        </StyledTouchableOpacity>
+                        <StyledTouchableOpacity onPress={toggleCameraType} className="rounded-full bg-black/30 w-12 h-12 items-center justify-center">
+                            <Icon name="camera-flip" size={24} color="white" />
+                        </StyledTouchableOpacity>
+                    </StyledView>
+                    <StyledView className="absolute bottom-[84px] left-0 right-0 w-full flex justify-center items-center">
+                        <StyledTouchableOpacity
+                            onPress={takePicture}
                             aria-label="Capture photo"
-                            className="w-18 h-18 rounded-full bg-[rgba(0,0,0,0.35)] border-2 border-[rgba(255,255,255,0.25)] flex items-center justify-center transition-transform duration-micro ease-out active:scale-92 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-18 h-18 rounded-full bg-transparent border-4 border-white flex items-center justify-center"
                         >
-                            <Icon name="camera" className="w-8 h-8 text-white" />
-                        </button>
-                    </footer>
-                </>
+                            <StyledView className="w-14 h-14 rounded-full bg-white" />
+                        </StyledTouchableOpacity>
+                    </StyledView>
+                </Camera>
             )}
-        </div>
+        </StyledView>
     );
 };
 

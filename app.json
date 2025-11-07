@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "FITART",
@@ -7,21 +6,40 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "sdkVersion": "51.0.0",
-    "platforms": ["ios", "android"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
     "updates": {
       "enabled": true,
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0
     },
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "com.fitart.app",
       "infoPlist": {
         "NSCameraUsageDescription": "FITART needs access to your camera for progress photos.",
         "NSPhotoLibraryUsageDescription": "FITART needs access to your photo library for profile and progress photos."
       }
     },
-    "assetBundlePatterns": ["**/*"]
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [],
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    }
   }
 }

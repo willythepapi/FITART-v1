@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+// Fix: Import Image component from react-native.
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { styled } from 'nativewind';
 import { useAppUseCases } from '../application/usecase-provider';
 import { useUnit } from '../context/UnitContext';
 import type { ProgressPhotoEntity } from '../domain/entities';
@@ -6,13 +9,20 @@ import Button from '../components/Button';
 import Icon from '../components/Icon';
 import ProgressPhotoPosterScreen from './ProgressPhotoPosterScreen';
 
+const StyledView = styled(View);
+const StyledText = styled(Text);
+const StyledTouchableOpacity = styled(TouchableOpacity);
+const StyledScrollView = styled(ScrollView);
+// Fix: Create a styled version of the Image component for nativewind class names.
+const StyledImage = styled(Image);
+
 // --- UI Components for this screen ---
 
 const StatCard: React.FC<{ title: string; value: string; }> = ({ title, value }) => (
-    <div className="flex-1 bg-dark-surface rounded-radius-std p-4 text-center">
-        <p className="text-2xl font-bold text-dark-text-primary tracking-tighter">{value}</p>
-        <p className="text-xs text-dark-text-secondary uppercase tracking-wider mt-1">{title}</p>
-    </div>
+    <StyledView className="flex-1 bg-dark-surface rounded-radius-std p-4 items-center justify-center">
+        <StyledText className="text-2xl font-bold text-dark-text-primary tracking-tighter">{value}</StyledText>
+        <StyledText className="text-xs text-dark-text-secondary uppercase tracking-wider mt-1 text-center">{title}</StyledText>
+    </StyledView>
 );
 
 const HeatmapBlock: React.FC<{ status: 'full' | 'partial' | 'none', day: string }> = ({ status, day }) => {
@@ -22,10 +32,10 @@ const HeatmapBlock: React.FC<{ status: 'full' | 'partial' | 'none', day: string 
         none: 'bg-dark-surface'
     };
     return (
-        <div className="flex flex-col items-center gap-2">
-            <div className={`w-7 h-7 rounded-lg ${statusClasses[status]}`} />
-            <p className="text-xs font-medium text-dark-text-secondary">{day}</p>
-        </div>
+        <StyledView className="flex flex-col items-center gap-2">
+            <StyledView className={`w-7 h-7 rounded-lg ${statusClasses[status]}`} />
+            <StyledText className="text-xs font-medium text-dark-text-secondary">{day}</StyledText>
+        </StyledView>
     );
 };
 
@@ -45,7 +55,6 @@ const getStartOfWeek = (d: Date) => {
 
 const WeeklyInsightScreen: React.FC<WeeklyInsightScreenProps> = ({ onClose }) => {
     const { unitSystem, convertWeightFromMetric, getWeightLabel } = useUnit();
-    // Fix: Use correct use case names 'getMealsByDate' and 'getProgressPhotos'.
     const { getProgressHistory, getMealsByDate, getWeightHistory, getProgressPhotos } = useAppUseCases();
 
     const [isLoading, setIsLoading] = useState(true);
@@ -62,7 +71,6 @@ const WeeklyInsightScreen: React.FC<WeeklyInsightScreenProps> = ({ onClose }) =>
         const startDate = startOfWeek.toISOString().split('T')[0];
         const endDate = today.toISOString().split('T')[0];
         
-        // Fix: Call correct use cases. getMealsByDate() without arguments now fetches all meals.
         const [progress, meals, weights, photos] = await Promise.all([
             getProgressHistory.execute(startDate, endDate),
             getMealsByDate.execute(),
@@ -87,7 +95,7 @@ const WeeklyInsightScreen: React.FC<WeeklyInsightScreenProps> = ({ onClose }) =>
         // Calculate stats
         const relevantProgress = progress.filter(p => new Date(p.date) <= today);
         const avgCalories = relevantProgress.length > 0 ? relevantProgress.reduce((sum, p) => sum + p.caloriesEaten, 0) / relevantProgress.length : 0;
-        const workoutsCompleted = relevantProgress.filter(p => p.workoutsCompleted.length > 0).length;
+        const workoutsCompleted = relevantProgress.reduce((sum, p) => sum + p.workoutsCompleted.length, 0);
         
         let weightChange: number | null = null;
         if (weightsThisWeek.length >= 2) {
@@ -141,12 +149,9 @@ const WeeklyInsightScreen: React.FC<WeeklyInsightScreenProps> = ({ onClose }) =>
 
     if (isLoading || !insightData) {
         return (
-            <div className="fixed inset-0 bg-dark-bg z-50 flex items-center justify-center">
-                <svg className="animate-spin h-8 w-8 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </div>
+            <StyledView className="fixed inset-0 bg-dark-bg z-50 flex items-center justify-center">
+                <ActivityIndicator size="large" color="#7FB7FF" />
+            </StyledView>
         );
     }
     
@@ -154,54 +159,66 @@ const WeeklyInsightScreen: React.FC<WeeklyInsightScreenProps> = ({ onClose }) =>
     const displayWc = wc !== null ? (unitSystem === 'imperial' ? convertWeightFromMetric(wc) : wc) : null;
     const formattedWeightChange = displayWc !== null ? `${wc > 0 ? '+' : ''}${displayWc.toFixed(1)} ${getWeightLabel()}` : 'N/A';
     
+    const startOfWeekDate = getStartOfWeek(new Date());
+    const todayTimestamp = new Date().getTime();
+    const daysElapsedThisWeek = insightData.heatmapData.filter((d: any, i: number) => {
+        const dayDate = new Date(startOfWeekDate);
+        dayDate.setDate(startOfWeekDate.getDate() + i);
+        return dayDate.getTime() <= todayTimestamp;
+    }).length;
 
     return (
         <>
-            <div className="fixed inset-0 bg-dark-bg z-50 overflow-y-auto p-5 animate-fadeIn">
-                 <header className="flex justify-between items-center mb-6">
-                    <div>
-                        <h1 className="text-3xl font-semibold text-dark-text-primary tracking-display">Weekly Insight</h1>
-                        <p className="text-dark-text-secondary">Week {insightData.weekNumber}</p>
-                    </div>
-                    <Button onClick={onClose} shape="circle" iconOnly iconName="close" variant="ghost" />
-                </header>
-                
-                <div className="space-y-6">
-                    {/* Stats Row */}
-                    <div className="flex gap-3">
-                        <StatCard title="Avg. Calories" value={String(insightData.avgCalories)} />
-                        {/* Fix: Operator '<=' cannot be applied to types 'number' and 'Date'. Compare with timestamp instead. */}
-                        <StatCard title="Workouts" value={`${insightData.workoutsCompleted}/${insightData.heatmapData.filter((d: any, i: number) => new Date(getStartOfWeek(new Date())).setDate(getStartOfWeek(new Date()).getDate() + i) <= new Date().getTime()).length}`} />
-                        <StatCard title="Weight Change" value={formattedWeightChange} />
-                    </div>
-
-                    {/* Photo */}
-                    {insightData.mostRecentPhoto ? (
-                        <div className="relative cursor-pointer" onClick={() => setSelectedPhoto(insightData.mostRecentPhoto)}>
-                            <img src={insightData.mostRecentPhoto.imageDataUrl} alt="Most recent progress" className="w-full rounded-radius-std" />
-                            <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm text-white text-xs font-semibold px-2 py-1 rounded-full">
-                                {new Date(insightData.mostRecentPhoto.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                            </div>
-                        </div>
-                    ) : (
-                         <div className="w-full aspect-[3/4] bg-dark-surface rounded-radius-std flex flex-col items-center justify-center text-center p-4">
-                            <Icon name="camera" className="w-12 h-12 text-dark-text-tertiary mb-2" />
-                            <p className="text-sm font-medium text-dark-text-secondary">No photo from this week</p>
-                            <p className="text-xs text-dark-text-tertiary">Take one using the Camera tab!</p>
-                        </div>
-                    )}
+            <StyledView className="fixed inset-0 bg-dark-bg z-50 animate-fadeIn">
+                 <StyledScrollView contentContainerStyle={{ padding: 20 }}>
+                     <StyledView className="flex-row justify-between items-center mb-6">
+                        <StyledView>
+                            <StyledText className="text-3xl font-semibold text-dark-text-primary tracking-display">Weekly Insight</StyledText>
+                            <StyledText className="text-dark-text-secondary">Week {insightData.weekNumber}</StyledText>
+                        </StyledView>
+                        {/* Fix: Changed onPress to onClick to match the Button component's expected props. */}
+                        <Button onClick={onClose} shape="circle" iconOnly iconName="close" variant="ghost" />
+                    </StyledView>
                     
-                    {/* Heatmap */}
-                    <div>
-                        <h3 className="text-lg font-semibold text-dark-text-primary mb-3">Activity Log</h3>
-                        <div className="flex justify-between">
-                            {insightData.heatmapData.map((data: any, index: number) => (
-                                <HeatmapBlock key={index} {...data} />
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    <StyledView className="space-y-6">
+                        {/* Stats Row */}
+                        <StyledView className="flex-row gap-3">
+                            <StatCard title="Avg. Calories" value={String(insightData.avgCalories)} />
+                            <StatCard title="Workouts" value={`${insightData.workoutsCompleted}/${daysElapsedThisWeek}`} />
+                            <StatCard title="Weight Change" value={formattedWeightChange} />
+                        </StyledView>
+
+                        {/* Photo */}
+                        {insightData.mostRecentPhoto ? (
+                            <StyledTouchableOpacity onPress={() => setSelectedPhoto(insightData.mostRecentPhoto)}>
+                                {/* Fix: Use the styled StyledImage component. */}
+                                <StyledImage source={{uri: insightData.mostRecentPhoto.imageDataUrl}} className="w-full aspect-[4/3] rounded-radius-std" />
+                                <StyledView className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm px-2 py-1 rounded-full">
+                                    <StyledText className="text-white text-xs font-semibold">
+                                        {new Date(insightData.mostRecentPhoto.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                    </StyledText>
+                                </StyledView>
+                            </StyledTouchableOpacity>
+                        ) : (
+                             <StyledView className="w-full aspect-[4/3] bg-dark-surface rounded-radius-std flex flex-col items-center justify-center text-center p-4">
+                                <Icon name="camera" size={48} color="#657786" />
+                                <StyledText className="text-sm font-medium text-dark-text-secondary mt-2">No photo from this week</StyledText>
+                                <StyledText className="text-xs text-dark-text-tertiary">Take one using the Camera tab!</StyledText>
+                            </StyledView>
+                        )}
+                        
+                        {/* Heatmap */}
+                        <StyledView>
+                            <StyledText className="text-lg font-semibold text-dark-text-primary mb-3">Activity Log</StyledText>
+                            <StyledView className="flex-row justify-between">
+                                {insightData.heatmapData.map((data: any, index: number) => (
+                                    <HeatmapBlock key={index} {...data} />
+                                ))}
+                            </StyledView>
+                        </StyledView>
+                    </StyledView>
+                 </StyledScrollView>
+            </StyledView>
 
             {selectedPhoto && (
                 <ProgressPhotoPosterScreen 

@@ -211,7 +211,10 @@ const WeeklyOverviewCard: React.FC<{ plan: WeeklyWorkoutPlanEntity[]; workoutMap
                 <div className="space-y-2">
                     {days.map(({ id, key }) => {
                         const workoutId = planMap.get(id);
-                        const workout = workoutId ? workoutMap[workoutId] : null;
+                        // Fix: Add a type guard to ensure workoutId is a string before using it as an index.
+                        // This resolves the "Type 'unknown' cannot be used as an index type" error, which likely stems
+                        // from improper type inference from the data layer (e.g., JSON.parse returning 'any').
+                        const workout = typeof workoutId === 'string' ? workoutMap[workoutId] : null;
                         const dayName = t(`workouts_day_${key}` as any);
                         
                         return (
