@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type UnitSystem = 'metric' | 'imperial';
 
@@ -19,21 +20,38 @@ interface UnitContextType {
   convertHeightFromMetric: (height: number) => number; // from cm to in
 }
 
+const UNIT_KEY = 'zenithfit_units';
 const UnitContext = createContext<UnitContextType | undefined>(undefined);
 
 export const UnitProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [unitSystem, setUnitSystem] = useState<UnitSystem>(() => {
-    const storedUnit = localStorage.getItem('zenithfit_units');
-    return (storedUnit as UnitSystem) || 'metric';
-  });
+  const [unitSystem, setUnitSystemState] = useState<UnitSystem>('metric');
 
   useEffect(() => {
-    localStorage.setItem('zenithfit_units', unitSystem);
-  }, [unitSystem]);
+    const loadUnitSystem = async () => {
+      try {
+        const storedUnit = await AsyncStorage.getItem(UNIT_KEY);
+        if (storedUnit) {
+          setUnitSystemState(storedUnit as UnitSystem);
+        }
+      } catch (error) {
+        console.error('Failed to load unit system from storage', error);
+      }
+    };
+    loadUnitSystem();
+  }, []);
+
+  const setUnitSystem = async (system: UnitSystem) => {
+    try {
+      await AsyncStorage.setItem(UNIT_KEY, system);
+      setUnitSystemState(system);
+    } catch (error) {
+      console.error('Failed to save unit system to storage', error);
+    }
+  };
 
   const getWeightLabel = useCallback(() => (unitSystem === 'metric' ? 'kg' : 'lbs'), [unitSystem]);
   
-  const getHeightLabel = useCallback(() => (unitSystem === 'metric' ? 'cm' : 'inches'), [unitSystem]);
+  const getHeightLabel = useCallback(() => (unitSystem === 'metric' ? 'cm' : 'in'), [unitSystem]);
 
   const formatWeight = useCallback((kg: number) => {
     if (unitSystem === 'metric') {

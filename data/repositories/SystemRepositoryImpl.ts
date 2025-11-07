@@ -4,6 +4,6 @@ import { db } from '../database';
 
 export class SystemRepositoryImpl implements SystemRepository {
   async clearAllData(): Promise<void> {
-    db.clear();
+    await db.clear();
   }
 }

@@ -1,4 +1,6 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { translations } from './translations';
 
 type Language = 'en' | 'tr';
@@ -10,18 +12,34 @@ interface LanguageContextType {
   t: (key: keyof Translations, params?: Record<string, string | number>) => string;
 }
 
+const LANG_KEY = 'zenithfit_language';
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>(() => {
-    const storedLang = localStorage.getItem('zenithfit_language');
-    // Default to English if no preference is stored
-    return (storedLang as Language) || 'en';
-  });
+  const [language, setLanguageState] = useState<Language>('en');
 
   useEffect(() => {
-    localStorage.setItem('zenithfit_language', language);
-  }, [language]);
+    const loadLanguage = async () => {
+      try {
+        const storedLang = await AsyncStorage.getItem(LANG_KEY);
+        if (storedLang) {
+          setLanguageState(storedLang as Language);
+        }
+      } catch (error) {
+        console.error('Failed to load language from storage', error);
+      }
+    };
+    loadLanguage();
+  }, []);
+
+  const setLanguage = async (newLanguage: Language) => {
+    try {
+      await AsyncStorage.setItem(LANG_KEY, newLanguage);
+      setLanguageState(newLanguage);
+    } catch (error) {
+      console.error('Failed to save language to storage', error);
+    }
+  };
 
   const t = useCallback((key: keyof Translations, params?: Record<string, string | number>): string => {
     let translation = translations[language][key] || translations.en[key];

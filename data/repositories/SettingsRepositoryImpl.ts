@@ -5,7 +5,7 @@ import { db } from '../database';
 
 export class SettingsRepositoryImpl implements SettingsRepository {
   private async getOrCreateSettings(): Promise<AppSettingsEntity> {
-    let settings = db.findOne('app_settings', (s) => s.id === 'singleton-settings');
+    let settings = await db.findOne('app_settings', (s) => s.id === 'singleton-settings');
     if (!settings) {
       const newSettings: AppSettingsEntity = {
         id: 'singleton-settings',
@@ -13,7 +13,7 @@ export class SettingsRepositoryImpl implements SettingsRepository {
         workoutReminderTime: '18:00',
         waterReminderInterval: 30,
       };
-      db.insert('app_settings', newSettings);
+      await db.insert('app_settings', newSettings);
       settings = newSettings;
     }
     return { ...settings };
@@ -24,10 +24,15 @@ export class SettingsRepositoryImpl implements SettingsRepository {
   }
 
   async updateSettings(updates: Partial<Omit<AppSettingsEntity, 'id'>>): Promise<AppSettingsEntity> {
-    const updatedSettings = db.update('app_settings', (s) => s.id === 'singleton-settings', updates);
+    const updatedSettings = await db.update('app_settings', (s) => s.id === 'singleton-settings', updates);
     if (!updatedSettings) {
       // This should theoretically not happen due to getOrCreateSettings logic
-      throw new Error('Settings not found for update');
+      await this.getOrCreateSettings();
+      const retry = await db.update('app_settings', (s) => s.id === 'singleton-settings', updates);
+      if (!retry) {
+        throw new Error('Settings not found for update');
+      }
+      return { ...retry };
     }
     return { ...updatedSettings };
   }

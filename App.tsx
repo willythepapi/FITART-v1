@@ -1,39 +1,52 @@
 
 import React, { useState, useEffect } from 'react';
+// Fix: Import TouchableOpacity from react-native.
+import { View, StyleSheet, useColorScheme, TouchableOpacity } from 'react-native';
 import * as Updates from 'expo-updates';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+
 import HomeScreen from './screens/HomeScreen';
 import WorkoutsScreen from './screens/WorkoutsScreen';
 import CameraScreen from './screens/CameraScreen';
 import ProgressScreen from './screens/ProgressScreen';
-import ProfileScreen from './screens/ProfileScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import BottomNav from './components/BottomNav';
 import type { NavItem, ModalItem } from './types';
 import Modal from './components/Modal';
-import { useLanguage } from './context/LanguageContext';
+import ProfileScreen from './screens/ProfileScreen';
 import MealLoggerModal from './components/MealLoggerModal';
 import Icon from './components/Icon';
 import ActionWheel from './components/ActionWheel';
 import MealsHistoryScreen from './screens/MealsHistoryScreen';
 
+import { UseCaseProvider } from './application/usecase-provider';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { UnitProvider } from './context/UnitContext';
+import { StyleProvider } from './context/StyleContext';
 
 const ActionFab: React.FC<{ onClick: () => void; isOpen: boolean }> = ({ onClick, isOpen }) => (
-    <button
-        onClick={onClick}
-        className="fixed bottom-[90px] left-1/2 -translate-x-1/2 w-14 h-14 bg-fab-bg backdrop-blur-[12px] rounded-full flex items-center justify-center text-fab-icon shadow-lg transition-transform duration-fast hover:scale-[1.08] active:scale-95 z-[25]"
-        aria-label="Log Activity"
-    >
-        <div className={`transition-transform duration-base ${isOpen ? 'rotate-45' : ''}`}>
-          <Icon name="plus" className="w-7 h-7" />
-        </div>
-    </button>
+    <View style={styles.fabContainer}>
+        <TouchableOpacity
+            onPress={onClick}
+            style={styles.fab}
+            activeOpacity={0.8}
+        >
+            <View style={{ transform: [{ rotate: isOpen ? '45deg' : '0deg' }] }}>
+              {/* Fix: Pass size and color props to Icon component. Icon component is updated to handle these. */}
+              <Icon name="plus" size={28} color="#FFFFFF" />
+            </div>
+        </TouchableOpacity>
+    </View>
 );
 
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavItem>('Home');
   const [activeModal, setActiveModal] = useState<ModalItem>(null);
   const { t } = useLanguage();
+  const { theme } = useTheme();
 
   const [isActionWheelOpen, setIsActionWheelOpen] = useState(false);
   const [isMealModalOpen, setIsMealModalOpen] = useState(false);
@@ -54,24 +67,32 @@ const App: React.FC = () => {
     };
     applyUpdates();
   }, []);
-
-  const ScreenWrapper: React.FC<{isActive: boolean, children: React.ReactNode}> = ({isActive, children}) => (
-    <div hidden={!isActive} className={isActive ? 'animate-screenFadeIn' : ''}>
-      {children}
-    </div>
-  );
   
   const refreshHomeData = () => setHomeDataVersion(v => v + 1);
 
+  const renderScreen = () => {
+    switch (activeTab) {
+        case 'Home':
+            return <HomeScreen setActiveTab={setActiveTab} onViewMeals={() => setIsMealsHistoryOpen(true)} dataVersion={homeDataVersion} />;
+        case 'Workouts':
+            return <WorkoutsScreen />;
+        case 'Camera':
+            return <CameraScreen setActiveTab={setActiveTab} />;
+        case 'Progress':
+            return <ProgressScreen />;
+        case 'Settings':
+            return <SettingsScreen openProfile={() => setActiveModal('Profile')} />;
+        default:
+            return null;
+    }
+  }
+
   return (
-    <div className="bg-light-bg dark:bg-dark-bg text-light-text-primary dark:text-dark-text-primary min-h-screen font-sans">
-      <main className={`pb-20 transition-all duration-200 ease-out`}>
-        <ScreenWrapper isActive={activeTab === 'Home'}><HomeScreen setActiveTab={setActiveTab} onViewMeals={() => setIsMealsHistoryOpen(true)} dataVersion={homeDataVersion} /></ScreenWrapper>
-        <ScreenWrapper isActive={activeTab === 'Workouts'}><WorkoutsScreen /></ScreenWrapper>
-        <ScreenWrapper isActive={activeTab === 'Camera'}><CameraScreen setActiveTab={setActiveTab} /></ScreenWrapper>
-        <ScreenWrapper isActive={activeTab === 'Progress'}><ProgressScreen /></ScreenWrapper>
-        <ScreenWrapper isActive={activeTab === 'Settings'}><SettingsScreen openProfile={() => setActiveModal('Profile')} /></ScreenWrapper>
-      </main>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme === 'dark' ? '#000' : '#F0F2F5' }]} edges={['top', 'left', 'right']}>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+      <View style={{ flex: 1, paddingBottom: 64 }}>
+        {renderScreen()}
+      </View>
       
       <Modal
         isOpen={activeModal === 'Profile'}
@@ -114,8 +135,53 @@ const App: React.FC = () => {
       )}
 
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
-    </div>
+    </SafeAreaView>
   );
 };
+
+const App: React.FC = () => {
+    return (
+        <UseCaseProvider>
+            <LanguageProvider>
+                <ThemeProvider>
+                    <UnitProvider>
+                        <StyleProvider>
+                            <SafeAreaProvider>
+                                <AppContent />
+                            </SafeAreaProvider>
+                        </StyleProvider>
+                    </UnitProvider>
+                </ThemeProvider>
+            </LanguageProvider>
+        </UseCaseProvider>
+    );
+};
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+    },
+    fabContainer: {
+        position: 'absolute',
+        bottom: 90,
+        left: '50%',
+        transform: [{ translateX: -28 }],
+        zIndex: 25,
+    },
+    fab: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: 'rgba(58, 58, 60, 0.8)', // fab-bg with backdrop blur approximation
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+});
+
 
 export default App;

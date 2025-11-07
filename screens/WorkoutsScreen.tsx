@@ -187,7 +187,8 @@ const WorkoutFormModal: React.FC<WorkoutFormModalProps> = ({ isOpen, onSave, onC
     );
 };
 
-const WeeklyOverviewCard: React.FC<{ plan: WeeklyWorkoutPlanEntity[]; workouts: Record<string, WorkoutEntity>; onEditPlan: () => void; }> = ({ plan, workouts, onEditPlan }) => {
+// Fix: Renamed 'workouts' prop to 'workoutMap' to avoid potential naming collisions and fix typing issue.
+const WeeklyOverviewCard: React.FC<{ plan: WeeklyWorkoutPlanEntity[]; workoutMap: Record<string, WorkoutEntity>; onEditPlan: () => void; }> = ({ plan, workoutMap, onEditPlan }) => {
     const { t } = useLanguage();
     const days = [
         { id: 1, key: 'monday' }, { id: 2, key: 'tuesday' }, { id: 3, key: 'wednesday' },
@@ -210,7 +211,7 @@ const WeeklyOverviewCard: React.FC<{ plan: WeeklyWorkoutPlanEntity[]; workouts: 
                 <div className="space-y-2">
                     {days.map(({ id, key }) => {
                         const workoutId = planMap.get(id);
-                        const workout = workoutId ? workouts[workoutId] : null;
+                        const workout = workoutId ? workoutMap[workoutId] : null;
                         const dayName = t(`workouts_day_${key}` as any);
                         
                         return (
@@ -352,7 +353,7 @@ const WorkoutsScreen: React.FC = () => {
           <p className="dark:text-dark-text-secondary font-normal opacity-80 text-sm">Strong habits beat motivation.</p>
       </header>
       
-      <WeeklyOverviewCard plan={plan} workouts={planWorkouts} onEditPlan={handleOpenPlan} />
+      <WeeklyOverviewCard plan={plan} workoutMap={planWorkouts} onEditPlan={handleOpenPlan} />
 
         <>
             <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-5 px-5" style={{ scrollbarWidth: 'none' }}>

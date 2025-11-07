@@ -1,4 +1,6 @@
+
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type FontSize = 'sm' | 'base' | 'lg';
 
@@ -7,20 +9,34 @@ interface StyleContextType {
   setFontSize: (size: FontSize) => void;
 }
 
+const FONT_SIZE_KEY = 'zenithfit_fontsize';
 const StyleContext = createContext<StyleContextType | undefined>(undefined);
 
 export const StyleProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [fontSize, setFontSize] = useState<FontSize>(() => {
-    const storedSize = localStorage.getItem('zenithfit_fontsize');
-    return (storedSize as FontSize) || 'base';
-  });
+  const [fontSize, setFontSizeState] = useState<FontSize>('base');
 
   useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('font-sm', 'font-base', 'font-lg');
-    root.classList.add(`font-${fontSize}`);
-    localStorage.setItem('zenithfit_fontsize', fontSize);
-  }, [fontSize]);
+    const loadFontSize = async () => {
+      try {
+        const storedSize = await AsyncStorage.getItem(FONT_SIZE_KEY);
+        if (storedSize) {
+          setFontSizeState(storedSize as FontSize);
+        }
+      } catch (error) {
+        console.error('Failed to load font size from storage', error);
+      }
+    };
+    loadFontSize();
+  }, []);
+
+  const setFontSize = async (size: FontSize) => {
+    try {
+      await AsyncStorage.setItem(FONT_SIZE_KEY, size);
+      setFontSizeState(size);
+    } catch (error) {
+      console.error('Failed to save font size to storage', error);
+    }
+  };
 
   const value = useMemo(() => ({ fontSize, setFontSize }), [fontSize]);
 

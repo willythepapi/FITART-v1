@@ -1,21 +1,27 @@
+
 {
   "expo": {
-    "name": "ZenithFit - AI Fitness Tracker",
-    "slug": "zenithfit-ai-fitness-tracker",
+    "name": "FITART",
+    "slug": "fitart",
+    "scheme": "fitart",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {},
+    "userInterfaceStyle": "dark",
+    "sdkVersion": "51.0.0",
+    "platforms": ["ios", "android"],
     "updates": {
       "enabled": true,
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 0
-    }
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.fitart.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "FITART needs access to your camera for progress photos.",
+        "NSPhotoLibraryUsageDescription": "FITART needs access to your photo library for profile and progress photos."
+      }
+    },
+    "assetBundlePatterns": ["**/*"]
   }
 }
