@@ -1,9 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    './App.{js,jsx,ts,tsx}',
-    './screens/**/*.{js,jsx,ts,tsx}',
-    './components/**/*.{js,jsx,ts,tsx}',
+    './src/App.{js,jsx,ts,tsx}',
+    './src/screens/**/*.{js,jsx,ts,tsx}',
+    './src/components/**/*.{js,jsx,ts,tsx}',
+    './src/navigation/**/*.{js,jsx,ts,tsx}',
   ],
   theme: {
     extend: {
@@ -45,11 +46,11 @@ module.exports = {
         }
       },
       borderRadius: {
-        'radius-std': '24px',
-        'radius-input': '16px',
-        'radius-btn': '18px',
-        'radius-lg': '28px',
-        'radius-modal': '32px',
+        'radius-std': 24,
+        'radius-input': 16,
+        'radius-btn': 18,
+        'radius-lg': 28,
+        'radius-modal': 32,
       },
       boxShadow: {
         'elevation-md': '0 4px 12px rgba(0, 0, 0, 0.15)',
@@ -96,8 +97,8 @@ module.exports = {
         'dot-bounce': 'dotBounce 1.2s infinite ease-in-out',
       },
       letterSpacing: {
-        display: '-0.025em',
-        title: '-0.015em',
+        display: -0.025,
+        title: -0.015,
       },
       transitionTimingFunction: {
         'out-expo': 'cubic-bezier(0.16, 1, 0.3, 1)',
