@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Dimensions } from 'react-native';
 import { useAppUseCases } from '../application/usecase-provider';
 import type { UserEntity, WeightHistoryEntity, ProgressPhotoEntity } from '../domain/entities';
-import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { useLanguage } from '../context/LanguageContext';
 import { useUnit } from '../context/UnitContext';
 import Button from '../components/Button';
@@ -10,12 +10,13 @@ import CircularProgress from '../components/CircularProgress';
 import Icon from '../components/Icon';
 import ProgressPhotoPosterScreen from './ProgressPhotoPosterScreen';
 import WeeklyInsightScreen from './WeeklyInsightScreen';
+import SimpleLineChart from '../components/SimpleLineChart';
 
 const Stat: React.FC<{ value: string; label: string }> = ({ value, label }) => (
-    <div className="text-center">
+    <View className="text-center">
         <p className="text-3xl font-semibold text-light-text-primary dark:text-dark-text-primary tracking-display">{value}</p>
         <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary tracking-wide uppercase">{label}</p>
-    </div>
+    </View>
 );
 
 const ProgressPhotoCard: React.FC<{ photo: ProgressPhotoEntity; onClick: () => void; }> = ({ photo, onClick }) => {
@@ -29,10 +30,10 @@ const ProgressPhotoCard: React.FC<{ photo: ProgressPhotoEntity; onClick: () => v
     return (
         <button onClick={onClick} className="w-full text-left bg-light-card dark:bg-dark-surface rounded-radius-std overflow-hidden animate-fadeInUp transition-transform duration-fast active:scale-[0.97]">
             <img src={photo.imageDataUrl} alt="Progress" className="w-full h-auto object-cover" />
-            <div className="p-4">
+            <View className="p-4">
                 <p className="text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary">{formattedDate}</p>
                 {photo.note && <p className="text-light-text-primary dark:text-dark-text-primary mt-1">{photo.note}</p>}
-            </div>
+            </View>
         </button>
     );
 };
@@ -101,11 +102,7 @@ const ProgressScreen: React.FC = () => {
         const totalLost = start.weight - current.weight;
         const percent = totalToLose > 0 ? (totalLost / totalToLose) * 100 : 0;
         
-        // Prepare sparkline data (last 7 entries)
-        const sparkline = weightHistory.slice(-7).map(entry => ({
-            date: entry.date,
-            weight: entry.weight
-        }));
+        const sparkline = weightHistory.slice(-7).map(entry => entry.weight);
 
         return {
             currentWeight: current.weight,
@@ -117,76 +114,67 @@ const ProgressScreen: React.FC = () => {
             journeyStartDate: new Date(start.date)
         };
     }, [user, weightHistory]);
+
+    const chartWidth = Dimensions.get('window').width - 44; // Full width minus padding
     
     if (!user) {
-        return <div className="p-5 text-center">{t('home_loading')}</div>;
+        return <View className="p-5 text-center"><p>{t('home_loading')}</p></View>;
     }
 
     return (
         <>
-            <div className="px-[22px] pt-[22px] pb-8 space-y-8">
-                <header className="animate-fadeInUp">
+            <View className="px-[22px] pt-[22px] pb-8 space-y-8">
+                <View className="animate-fadeInUp">
                     <h1 className="text-3xl font-semibold text-light-text-primary dark:text-dark-text-primary tracking-display">{t('progress_title')}</h1>
-                </header>
+                </View>
                 
-                <div className="flex justify-around items-center animate-fadeInUp" style={{ animationDelay: '100ms', opacity: 0 }}>
+                <View className="flex flex-row justify-around items-center animate-fadeInUp" style={{ animationDelay: '100ms', opacity: 0 }}>
                     <Stat value={formatWeight(currentWeight).split(' ')[0]} label="Current" />
                     <Stat value={formatWeight(targetWeight).split(' ')[0]} label="Goal" />
                      <Stat 
                         value={`${weeklyChange > 0 ? '+' : ''}${weeklyChange.toFixed(1)}`}
                         label="7-Day"
                     />
-                </div>
+                </View>
 
-                <div className="flex flex-col items-center gap-6 animate-fadeInUp" style={{ animationDelay: '200ms', opacity: 0 }}>
+                <View className="flex flex-col items-center gap-6 animate-fadeInUp" style={{ animationDelay: '200ms', opacity: 0 }}>
                     <CircularProgress percent={progressPercent} radius={100} strokeWidth={10} />
-                    <div className="h-20 w-full opacity-75">
-                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={sparklineData}>
-                                <Line
-                                    type="monotone"
-                                    dataKey="weight"
-                                    stroke="#7FB7FF"
-                                    strokeWidth={2.5}
-                                    dot={false}
-                                    isAnimationActive={true}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                    <View className="h-20 w-full opacity-75">
+                         <SimpleLineChart data={sparklineData} width={chartWidth} height={80} />
+                    </View>
+                </View>
 
-                <div className="pt-4 animate-fadeInUp grid grid-cols-2 gap-3" style={{ animationDelay: '300ms', opacity: 0 }}>
+                <View className="pt-4 animate-fadeInUp grid grid-cols-2 gap-3" style={{ animationDelay: '300ms', opacity: 0 }}>
                     <Button onClick={() => setIsPosterVisible(true)} variant="ghost" className="w-full">
                         Create Poster
                     </Button>
                     <Button onClick={() => setIsInsightVisible(true)} className="w-full">
                         Weekly Insight
                     </Button>
-                </div>
+                </View>
 
-                <section className="space-y-4 animate-fadeInUp" style={{ animationDelay: '400ms', opacity: 0 }}>
+                <View className="space-y-4 animate-fadeInUp" style={{ animationDelay: '400ms', opacity: 0 }}>
                     <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary tracking-title">Photo Log</h2>
                     {progressPhotos.length > 0 ? (
-                        <div className="space-y-4">
+                        <View className="space-y-4">
                             {progressPhotos.map(photo => <ProgressPhotoCard key={photo.id} photo={photo} onClick={() => setSelectedPhotoForPoster(photo)} />)}
-                        </div>
+                        </View>
                     ) : (
-                        <div className="text-center py-8 px-4 bg-light-card dark:bg-dark-surface rounded-radius-std">
+                        <View className="text-center py-8 px-4 bg-light-card dark:bg-dark-surface rounded-radius-std">
                             <Icon name="camera" className="w-12 h-12 mx-auto text-light-text-tertiary dark:text-dark-text-tertiary" />
                             <p className="mt-2 text-sm text-light-text-secondary dark:text-dark-text-secondary">No progress photos yet. Take your first photo from the Camera tab.</p>
-                        </div>
+                        </View>
                     )}
-                </section>
-            </div>
+                </View>
+            </View>
 
             {isPosterVisible && (
                 <PosterScreen 
-                    onClose={() => setIsPosterVisible(false)}
                     user={user}
                     currentWeight={currentWeight}
                     weeklyChange={weeklyChange}
                     journeyStartDate={journeyStartDate}
+                    onClose={() => setIsPosterVisible(false)}
                 />
             )}
             
